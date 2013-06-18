@@ -52,9 +52,11 @@ dependencies {
   */
 
   // If you're creating Groovy compiled verticles you may need the following dependencies
-  provided "org.codehaus.groovy:groovy-all:$groovyVersion"
-  provided "io.vertx:lang-groovy:$groovyLangModVersion@jar"
+  // provided "org.codehaus.groovy:groovy-all:$groovyVersion"
+  // provided "io.vertx:lang-groovy:$groovyLangModVersion@jar"
 
+  compile "org.glassfish.jersey.core:jersey-server:2.0-rc1"
+  compile "org.glassfish.jersey.media:jersey-media-json-jackson:2.0-rc1"
 }
 
 test {
@@ -72,27 +74,27 @@ Please edit the details below.
 def configurePom(def pom) {
   pom.project {
     name rootProject.name
-    description 'Description of your module here'
+    description 'Vertx 2 Jersey 2 integration module'
     inceptionYear '2013'
     packaging 'zip'
-    url 'Your project url'
+    url 'https://github.com/komelgman/vertx2-mod-jersey2'
 
     developers {
       developer {
-        id 'developer id (e.g. github username)'
-        name 'developer name'
-        email 'developer email'
+        id 'komelgman'
+        name 'Sergey Yungman'
+        email 'komelgman@gmail.com'
       }
     }
 
     scm {
-      url 'url to your repo - e.g. github repo url'
+      url 'git@github.com:komelgman/vertx2-mod-jersey2.git'
     }
 
     licenses {
       license {
-        name 'The name of the license used, e.g.: The Apache Software License, Version 2.0'
-        url 'URl to the license, e.g.: http://www.apache.org/licenses/LICENSE-2.0.txt'
+        name 'The Apache Software License, Version 2.0'
+        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
         distribution 'repo'
       }
     }
