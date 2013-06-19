@@ -13,16 +13,16 @@ import org.vertx.java.platform.Verticle;
 import org.vertx.java.platform.VerticleFactory;
 import org.vertx.java.platform.impl.java.CompilingClassLoader;
 
-import java.lang.reflect.Field;
-
 /**
  * User: syungman
  * Date: 18.06.13
  */
 public class HK2VerticleFactory implements VerticleFactory {
-    private static final Logger logger = LoggerFactory.getLogger(HK2VerticleFactory.class);
-    private static final String CONFIG_BOOTSTRAP_MAIN = "kom.vertx.hk2.BOOTSTRAP_MAIN";
+    public static final String CONFIG_BOOTSTRAP_MAIN = "kom.vertx.hk2.BOOTSTRAP_MAIN";
     public static final String CONFIG_LOCATOR_NAME = "kom.vertx.hk2.LOCATOR_NAME";
+    public static final String DEFAULT_LOCATOR_NAME = "kom.vertx.hk2.ServiceLocator";
+
+    private static final Logger logger = LoggerFactory.getLogger(HK2VerticleFactory.class);
 
     private Vertx vertx;
     private Container container;
@@ -46,14 +46,11 @@ public class HK2VerticleFactory implements VerticleFactory {
     }
 
     private Verticle newVerticle(String main) {
-        final String serviceLocatorName = System.getProperty(CONFIG_LOCATOR_NAME, "kom.vertx.hk2.ServiceLocator");
-
-        setDefaultServiceName(serviceLocatorName);
-
+        final String serviceLocatorName = System.getProperty(CONFIG_LOCATOR_NAME, DEFAULT_LOCATOR_NAME);
         final ServiceLocatorFactory factory = ServiceLocatorFactory.getInstance();
         final ServiceLocator locator = factory.create(serviceLocatorName);
 
-        bind(locator, new VertxBinder(vertx, container));
+        bind(locator, new VertxContextBinder(cl, vertx, container));
 
         final Binder bootstrap = getBootstrap(System.getProperty(CONFIG_BOOTSTRAP_MAIN, null));
         if (bootstrap != null) {
@@ -61,23 +58,6 @@ public class HK2VerticleFactory implements VerticleFactory {
         }
 
         return locator.createAndInitialize(loadClass(main, Verticle.class));
-    }
-
-    private void setDefaultServiceName(String containerName) {
-        final ServiceLocatorFactory factory = new HK2ServiceLocatorFactoryImpl(containerName);
-        final Class factoryClass = ServiceLocatorFactory.class;
-
-        try {
-            Field instance = factoryClass.getDeclaredField("INSTANCE");
-            instance.setAccessible(true);
-            instance.set(null, factory);
-        } catch (NoSuchFieldException e) {
-            logger.error("NoSuchFieldException while setting the service locator factory", e);
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-            logger.error("IllegalAccessException while setting the service locator factory", e);
-            throw new RuntimeException(e);
-        }
     }
 
     private Binder getBootstrap(String bootstrapClass) {

@@ -1,6 +1,7 @@
 package kom.vertx.hk2.resources;
 
 import kom.vertx.hk2.beans.TestBean;
+import org.vertx.java.core.Vertx;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -12,15 +13,11 @@ import javax.ws.rs.core.MediaType;
 public class RootResource {
 
     @Inject
-    private TestBean bean;
+    private Vertx vertx;
 
     @GET
     @Produces(MediaType.TEXT_PLAIN)
     public String getIt() {
-        if (bean != null) {
-            return bean.getName();
-        } else {
-            return "FuuuuucK";
-        }
+        return "ok" + vertx.getClass().getName();
     }
 }

@@ -2,6 +2,7 @@ package kom.vertx.jersey;
 
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
+import org.glassfish.hk2.api.ServiceLocator;
 import org.glassfish.jersey.internal.MapPropertiesDelegate;
 import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.server.internal.JerseyRequestTimeoutHandler;
@@ -36,6 +37,10 @@ public class JerseyHandler implements Handler<HttpServerRequest> {
     public JerseyHandler(URI baseUri, ResourceConfig jerseyConfig) {
         this.baseUri = baseUri;
         this.jerseyRequestHandler = new ApplicationHandler(jerseyConfig);
+    }
+
+    public ServiceLocator getServiceLocator() {
+        return jerseyRequestHandler.getServiceLocator();
     }
 
     @Override
