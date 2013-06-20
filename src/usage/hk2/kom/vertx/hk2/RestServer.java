@@ -1,16 +1,7 @@
 package kom.vertx.hk2;
 
-import kom.vertx.hk2.beans.TestBean;
 import kom.vertx.jersey.JerseyHandler;
-import org.glassfish.hk2.api.DynamicConfiguration;
-import org.glassfish.hk2.api.DynamicConfigurationService;
-import org.glassfish.hk2.api.ServiceLocator;
-import org.glassfish.hk2.utilities.Binder;
-import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.server.internal.scanning.PackageNamesScanner;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.http.HttpServerRequest;
 import org.vertx.java.core.http.RouteMatcher;
 import org.vertx.java.platform.Verticle;
 import org.vertx.java.platform.impl.cli.Starter;

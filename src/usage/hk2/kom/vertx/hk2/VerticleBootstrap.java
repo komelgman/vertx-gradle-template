@@ -22,12 +22,12 @@ public class VerticleBootstrap extends AbstractBinder {
 
     @Override
     protected void configure() {
-        final String[] packages = {
+        final String[] resources = {
                 "kom/vertx/hk2/resources"
         };
 
         final ResourceConfig restConfig = new ResourceConfig()
-                .registerFinder(new PackageNamesScanner(classLoader, packages, true))
+                .registerFinder(new PackageNamesScanner(classLoader, resources, true))
                 .register(JacksonFeature.class)
 
                 // rebind context

@@ -13,31 +13,60 @@ import org.vertx.java.platform.Verticle;
 import org.vertx.java.platform.VerticleFactory;
 import org.vertx.java.platform.impl.java.CompilingClassLoader;
 
+import static java.lang.System.getProperty;
+
 /**
  * User: syungman
  * Date: 18.06.13
  */
 public class HK2VerticleFactory implements VerticleFactory {
+
     public static final String CONFIG_BOOTSTRAP_MAIN = "kom.vertx.hk2.BOOTSTRAP_MAIN";
     public static final String CONFIG_LOCATOR_NAME = "kom.vertx.hk2.LOCATOR_NAME";
     public static final String DEFAULT_LOCATOR_NAME = "kom.vertx.hk2.ServiceLocator";
 
-    private static final Logger logger = LoggerFactory.getLogger(HK2VerticleFactory.class);
+    protected static final Logger logger = LoggerFactory.getLogger(HK2VerticleFactory.class);
 
-    private Vertx vertx;
-    private Container container;
-    private ClassLoader cl;
+    protected Vertx vertx;
+    protected Container container;
+    protected ClassLoader cl;
+
+    protected ServiceLocator locator;
+    protected String serviceLocatorName;
+    protected String bootstrapName;
+
+
+    @SuppressWarnings("UnusedDeclaration")
+    public HK2VerticleFactory() {
+        this(getProperty(CONFIG_LOCATOR_NAME, DEFAULT_LOCATOR_NAME),
+                getProperty(CONFIG_BOOTSTRAP_MAIN, null));
+    }
+
+    public HK2VerticleFactory(String serviceLocatorName, String bootstrapName) {
+        this.serviceLocatorName = serviceLocatorName;
+        this.bootstrapName = bootstrapName;
+    }
 
     @Override
     public void init(Vertx vertx, Container container, ClassLoader cl) {
         this.vertx = vertx;
         this.container = container;
         this.cl = cl;
+
+        buildServiceLocator();
+    }
+
+    protected void buildServiceLocator() {
+        this.locator = ServiceLocatorFactory.getInstance()
+                .create(serviceLocatorName);
+
+        bind(locator, new VertxContextBinder(cl, vertx, container));
+        bind(locator, newBootstrap(bootstrapName));
     }
 
     @Override
     public Verticle createVerticle(String main) throws Exception {
-        final Verticle verticle = newVerticle(main);
+        final Verticle verticle = locator.createAndInitialize(loadClass(main, Verticle.class));
 
         verticle.setVertx(vertx);
         verticle.setContainer(container);
@@ -45,22 +74,7 @@ public class HK2VerticleFactory implements VerticleFactory {
         return verticle;
     }
 
-    private Verticle newVerticle(String main) {
-        final String serviceLocatorName = System.getProperty(CONFIG_LOCATOR_NAME, DEFAULT_LOCATOR_NAME);
-        final ServiceLocatorFactory factory = ServiceLocatorFactory.getInstance();
-        final ServiceLocator locator = factory.create(serviceLocatorName);
-
-        bind(locator, new VertxContextBinder(cl, vertx, container));
-
-        final Binder bootstrap = getBootstrap(System.getProperty(CONFIG_BOOTSTRAP_MAIN, null));
-        if (bootstrap != null) {
-            bind(locator, bootstrap);
-        }
-
-        return locator.createAndInitialize(loadClass(main, Verticle.class));
-    }
-
-    private Binder getBootstrap(String bootstrapClass) {
+    protected Binder newBootstrap(String bootstrapClass) {
         if (bootstrapClass == null) {
             return null;
         }
@@ -74,7 +88,11 @@ public class HK2VerticleFactory implements VerticleFactory {
         return null;
     }
 
-    private static void bind(ServiceLocator locator, Binder binder) {
+    protected void bind(ServiceLocator locator, Binder binder) {
+        if (binder == null) {
+            return;
+        }
+
         final DynamicConfigurationService dcs = locator.getService(DynamicConfigurationService.class);
         final DynamicConfiguration dc = dcs.createDynamicConfiguration();
 
@@ -84,7 +102,7 @@ public class HK2VerticleFactory implements VerticleFactory {
         dc.commit();
     }
 
-    private <T> Class<T> loadClass(String main, Class<T> targetClass) throws IllegalArgumentException {
+    protected <T> Class<T> loadClass(String main, Class<T> targetClass) throws IllegalArgumentException {
         Class<?> result;
 
         try {
@@ -111,7 +129,7 @@ public class HK2VerticleFactory implements VerticleFactory {
         return (Class<T>)result;
     }
 
-    private Class<?> compileAndLoad(String className) throws ClassNotFoundException {
+    protected Class<?> compileAndLoad(String className) throws ClassNotFoundException {
         CompilingClassLoader compilingLoader = new CompilingClassLoader(cl, className);
         return compilingLoader.loadClass(compilingLoader.resolveMainClassName());
     }
@@ -126,7 +144,7 @@ public class HK2VerticleFactory implements VerticleFactory {
         // nothing
     }
 
-    private boolean isJavaSource(String main) {
+    protected boolean isJavaSource(String main) {
         return main.endsWith(".java");
     }
 }
