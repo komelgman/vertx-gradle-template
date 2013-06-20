@@ -1,9 +1,6 @@
 package kom.vertx.hk2;
 
-import org.glassfish.hk2.api.DynamicConfiguration;
-import org.glassfish.hk2.api.DynamicConfigurationService;
-import org.glassfish.hk2.api.ServiceLocator;
-import org.glassfish.hk2.api.ServiceLocatorFactory;
+import org.glassfish.hk2.api.*;
 import org.glassfish.hk2.utilities.Binder;
 import org.vertx.java.core.Vertx;
 import org.vertx.java.core.logging.Logger;
@@ -33,7 +30,7 @@ public class HK2VerticleFactory implements VerticleFactory {
 
     protected ServiceLocator locator;
     protected String serviceLocatorName;
-    protected String bootstrapName;
+    protected Factory<Binder> bootstrapProvider;
 
 
     @SuppressWarnings("UnusedDeclaration")
@@ -44,7 +41,13 @@ public class HK2VerticleFactory implements VerticleFactory {
 
     public HK2VerticleFactory(String serviceLocatorName, String bootstrapName) {
         this.serviceLocatorName = serviceLocatorName;
-        this.bootstrapName = bootstrapName;
+        this.bootstrapProvider = new BootstrapProvider(bootstrapName);
+    }
+
+    @SuppressWarnings("UnusedDeclaration")
+    public HK2VerticleFactory(String serviceLocatorName, Binder bootstrap) {
+        this.serviceLocatorName = serviceLocatorName;
+        this.bootstrapProvider = new BootstrapProvider(bootstrap);
     }
 
     @Override
@@ -61,12 +64,12 @@ public class HK2VerticleFactory implements VerticleFactory {
                 .create(serviceLocatorName);
 
         bind(locator, new VertxContextBinder(cl, vertx, container));
-        bind(locator, newBootstrap(bootstrapName));
+        bind(locator, bootstrapProvider.provide());
     }
 
     @Override
     public Verticle createVerticle(String main) throws Exception {
-        final Verticle verticle = locator.createAndInitialize(loadClass(main, Verticle.class));
+        final Verticle verticle = loadAndCreateVerticleInstance(main);
 
         verticle.setVertx(vertx);
         verticle.setContainer(container);
@@ -74,18 +77,8 @@ public class HK2VerticleFactory implements VerticleFactory {
         return verticle;
     }
 
-    protected Binder newBootstrap(String bootstrapClass) {
-        if (bootstrapClass == null) {
-            return null;
-        }
-
-        try {
-            return loadClass(bootstrapClass, Binder.class).newInstance();
-        } catch (Exception e) {
-            logger.warn("Can't load bootstrap " + bootstrapClass, e);
-        }
-
-        return null;
+    protected Verticle loadAndCreateVerticleInstance(String main) {
+        return locator.createAndInitialize(loadClass(main, Verticle.class));
     }
 
     protected void bind(ServiceLocator locator, Binder binder) {
@@ -146,5 +139,36 @@ public class HK2VerticleFactory implements VerticleFactory {
 
     protected boolean isJavaSource(String main) {
         return main.endsWith(".java");
+    }
+
+    protected class BootstrapProvider implements Factory<Binder> {
+        private String bootstrapName;
+        private Binder bootstrap;
+
+        public BootstrapProvider(String bootstrapName) {
+            this.bootstrapName = bootstrapName;
+        }
+
+        public BootstrapProvider(Binder bootstrap) {
+            this.bootstrap = bootstrap;
+        }
+
+        @Override
+        public Binder provide() {
+            if (bootstrap == null && bootstrapName != null) {
+                try {
+                    bootstrap = loadClass(bootstrapName, Binder.class).newInstance();
+                } catch (Exception e) {
+                    logger.warn("Can't load bootstrap " + bootstrapName, e);
+                }
+            }
+
+            return bootstrap;
+        }
+
+        @Override
+        public void dispose(Binder instance) {
+            // nothing
+        }
     }
 }
