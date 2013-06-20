@@ -8,9 +8,10 @@ import org.vertx.java.core.logging.impl.LoggerFactory;
 import org.vertx.java.platform.Container;
 import org.vertx.java.platform.Verticle;
 import org.vertx.java.platform.VerticleFactory;
-import org.vertx.java.platform.impl.java.CompilingClassLoader;
 
 import static java.lang.System.getProperty;
+import static kom.utils.ClassLoadHelper.loadClass;
+import static kom.utils.ServiceLocatorHelper.bind;
 
 /**
  * User: syungman
@@ -41,13 +42,13 @@ public class HK2VerticleFactory implements VerticleFactory {
 
     public HK2VerticleFactory(String serviceLocatorName, String bootstrapName) {
         this.serviceLocatorName = serviceLocatorName;
-        this.bootstrapProvider = new BootstrapProvider(bootstrapName);
+        this.bootstrapProvider = new BootstrapProvider(this, bootstrapName);
     }
 
     @SuppressWarnings("UnusedDeclaration")
     public HK2VerticleFactory(String serviceLocatorName, Binder bootstrap) {
         this.serviceLocatorName = serviceLocatorName;
-        this.bootstrapProvider = new BootstrapProvider(bootstrap);
+        this.bootstrapProvider = new BootstrapProvider(this, bootstrap);
     }
 
     @Override
@@ -78,53 +79,7 @@ public class HK2VerticleFactory implements VerticleFactory {
     }
 
     protected Verticle loadAndCreateVerticleInstance(String main) {
-        return locator.createAndInitialize(loadClass(main, Verticle.class));
-    }
-
-    protected void bind(ServiceLocator locator, Binder binder) {
-        if (binder == null) {
-            return;
-        }
-
-        final DynamicConfigurationService dcs = locator.getService(DynamicConfigurationService.class);
-        final DynamicConfiguration dc = dcs.createDynamicConfiguration();
-
-        locator.inject(binder);
-        binder.bind(dc);
-
-        dc.commit();
-    }
-
-    protected <T> Class<T> loadClass(String main, Class<T> targetClass) throws IllegalArgumentException {
-        Class<?> result;
-
-        try {
-            if (isJavaSource(main)) {
-                    result = compileAndLoad(main);
-            } else {
-                    result = cl.loadClass(main);
-            }
-        } catch (ClassNotFoundException e) {
-            final String message = "Class " + main + " not found";
-            logger.error(message);
-            throw new IllegalArgumentException(message);
-        }
-
-        if (!targetClass.isAssignableFrom(result)) {
-            final String message = "Class " + main
-                    + " does not implement " + targetClass.getName();
-
-            logger.error(message);
-            throw new IllegalArgumentException(message);
-        }
-
-        //noinspection unchecked
-        return (Class<T>)result;
-    }
-
-    protected Class<?> compileAndLoad(String className) throws ClassNotFoundException {
-        CompilingClassLoader compilingLoader = new CompilingClassLoader(cl, className);
-        return compilingLoader.loadClass(compilingLoader.resolveMainClassName());
+        return locator.createAndInitialize(loadClass(cl, main, Verticle.class));
     }
 
     @Override
@@ -135,40 +90,5 @@ public class HK2VerticleFactory implements VerticleFactory {
     @Override
     public void close() {
         // nothing
-    }
-
-    protected boolean isJavaSource(String main) {
-        return main.endsWith(".java");
-    }
-
-    protected class BootstrapProvider implements Factory<Binder> {
-        private String bootstrapName;
-        private Binder bootstrap;
-
-        public BootstrapProvider(String bootstrapName) {
-            this.bootstrapName = bootstrapName;
-        }
-
-        public BootstrapProvider(Binder bootstrap) {
-            this.bootstrap = bootstrap;
-        }
-
-        @Override
-        public Binder provide() {
-            if (bootstrap == null && bootstrapName != null) {
-                try {
-                    bootstrap = loadClass(bootstrapName, Binder.class).newInstance();
-                } catch (Exception e) {
-                    logger.warn("Can't load bootstrap " + bootstrapName, e);
-                }
-            }
-
-            return bootstrap;
-        }
-
-        @Override
-        public void dispose(Binder instance) {
-            // nothing
-        }
     }
 }

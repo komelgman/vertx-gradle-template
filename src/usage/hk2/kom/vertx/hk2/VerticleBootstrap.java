@@ -22,20 +22,21 @@ public class VerticleBootstrap extends AbstractBinder {
 
     @Override
     protected void configure() {
+        bind(getResourceConfig()).named("Rest handler config");
+        bind(9090).named("Server port");
+        bind(URI.create("http://localhost:9090/")).named("Base URI");
+    }
+
+    private ResourceConfig getResourceConfig() {
         final String[] resources = {
                 "kom/vertx/hk2/resources"
         };
 
-        final ResourceConfig restConfig = new ResourceConfig()
+        return new ResourceConfig()
                 .registerFinder(new PackageNamesScanner(classLoader, resources, true))
                 .register(JacksonFeature.class)
 
                 // rebind context
                 .register(new VertxContextBinder(classLoader, vertx, container));
-
-        bind(restConfig).named("Rest handler config");
-
-        bind(9090).named("Server port");
-        bind(URI.create("http://localhost:9090/")).named("Base URI");
     }
 }
